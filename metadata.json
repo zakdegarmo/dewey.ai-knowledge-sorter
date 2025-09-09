@@ -1,0 +1,5 @@
+{
+  "name": "Dewey.ai Knowledge Sorter",
+  "description": "An intelligent application that uses AI to read, summarize, and classify unstructured text documents into a browsable knowledge base organized by the Dewey Decimal Classification system.",
+  "requestFramePermissions": []
+}

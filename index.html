@@ -1,0 +1,51 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dewey.ai Knowledge Sorter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'base': '#1a1a1a',
+              'surface': '#2a2a2a',
+              'overlay': '#3a3a3a',
+              'muted': '#7f7f7f',
+              'subtle': '#999999',
+              'text': '#f1f1f1',
+              'love': '#e60073',
+              'gold': '#ffb800',
+              'rose': '#ff5a90',
+              'pine': '#17a2a2',
+              'foam': '#76f6d8',
+              'iris': '#9d6eff',
+              'highlight-low': 'rgba(42, 42, 42, 0.5)',
+              'highlight-med': 'rgba(60, 60, 60, 0.7)',
+              'highlight-high': 'rgba(80, 80, 80, 0.9)',
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.17.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-base text-text">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
