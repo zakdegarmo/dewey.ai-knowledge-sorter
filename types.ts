@@ -53,7 +53,6 @@ export interface GeminiResponse {
   ontologyReport: OntologyReport;
 }
 
-// Type for the raw DDC data from ddcData.ts
 export interface DdcConcept {
   id: string;
   prefLabel: { [lang: string]: string };

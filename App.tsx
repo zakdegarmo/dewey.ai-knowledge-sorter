@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Book } from './types';
 import { useLibrary } from './hooks/useLibrary';
 import { processTextDocument } from './services/geminiService';
@@ -9,27 +9,34 @@ import BookView from './components/BookView';
 import ApiSnippet from './components/ApiSnippet';
 import Loader from './components/Loader';
 import { LogoIcon } from './components/icons/LogoIcon';
+import ApiKeyInput from './components/ApiKeyInput';
 
 const App: React.FC = () => {
-  const { library, addBook } = useLibrary();
+  const { library, addBook, isLibraryInitialized } = useLibrary();
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState('');
 
   const handleFileProcess = useCallback(async (file: File) => {
+    if (!apiKey) {
+      setError("Please enter and save your Gemini API key before processing a file.");
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     setLoadingMessage('Reading document...');
     try {
       const text = await file.text();
       setLoadingMessage('Analyzing content with AI...');
-      const processedData = await processTextDocument(text);
+      const processedData = await processTextDocument(text, apiKey);
       
       setLoadingMessage('Generating call number...');
       const date = new Date();
       const dateString = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
-      const serialNumber = (Math.floor(Math.random() * 900) + 100).toString(); // 3-digit random serial
+      const serialNumber = (Math.floor(Math.random() * 900) + 100).toString();
       const callNumber = `${processedData.ddc.number}-${dateString}-${serialNumber}`;
 
       const newBook: Book = {
@@ -70,7 +77,7 @@ const App: React.FC = () => {
       setIsLoading(false);
       setLoadingMessage('');
     }
-  }, [addBook]);
+  }, [addBook, apiKey]);
 
   return (
     <div className="min-h-screen bg-base font-sans p-4 sm:p-6 lg:p-8">
@@ -87,7 +94,8 @@ const App: React.FC = () => {
 
         <main className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="flex flex-col gap-8">
-            <FileUpload onProcessFile={handleFileProcess} disabled={isLoading} />
+            <ApiKeyInput apiKey={apiKey} setApiKey={setApiKey} />
+            <FileUpload onProcessFile={handleFileProcess} disabled={isLoading || !isLibraryInitialized} />
             <ApiSnippet library={library} />
              {error && (
               <div className="bg-love/20 border border-love text-rose p-4 rounded-lg">
@@ -99,8 +107,8 @@ const App: React.FC = () => {
 
           <div className="bg-surface rounded-lg p-6 min-h-[500px] relative border border-overlay">
             <h2 className="text-xl font-bold mb-4 text-text">Library Collection</h2>
-            {isLoading ? (
-              <Loader message={loadingMessage} />
+            {isLoading || !isLibraryInitialized ? (
+              <Loader message={isLoading ? loadingMessage : 'Initializing Library...'} />
             ) : (
               <LibraryBrowser rootNode={library} onSelectBook={setSelectedBook} />
             )}
