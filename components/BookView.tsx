@@ -1,17 +1,17 @@
-
 import React, { useState, useCallback } from 'react';
 import { Book } from '../types';
 import { CloseIcon } from './icons/CloseIcon';
 import { ClipboardIcon } from './icons/ClipboardIcon';
 import { CheckIcon } from './icons/CheckIcon';
 import { downloadFile } from '../utils/fileUtils';
+import { Tabs, Tab } from './ui/Tabs';
 
 interface BookViewProps {
   book: Book;
   onClose: () => void;
 }
 
-type ActiveTab = 'summary' | 'ontology' | 'jsonld';
+type ActiveTab = 'summary' | 'ontology' | 'jsonld' | 'fileContent';
 
 const BookView: React.FC<BookViewProps> = ({ book, onClose }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('summary');
@@ -109,6 +109,12 @@ const BookView: React.FC<BookViewProps> = ({ book, onClose }) => {
               >
                 JSON-LD Data
               </button>
+              <button
+                onClick={() => setActiveTab('fileContent')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 ${activeTab === 'fileContent' ? 'border-rose text-rose' : 'border-transparent text-muted hover:text-text hover:border-muted'}`}
+              >
+                File Content
+              </button>
             </nav>
           </div>
 
@@ -130,6 +136,27 @@ const BookView: React.FC<BookViewProps> = ({ book, onClose }) => {
                   </button>
                 </div>
                 <button onClick={handleDownload} className="mt-4 px-4 py-2 bg-iris text-text rounded-md font-bold hover:bg-iris/80 transition-colors">Download JSON-LD</button>
+              </div>
+            )}
+            {activeTab === 'fileContent' && (
+              <div>
+                <pre className="whitespace-pre-wrap break-words bg-gray-100 p-4 rounded">
+                  {book.fileContent}
+                </pre>
+                <button
+                  onClick={() => {
+                    const blob = new Blob([book.fileContent], { type: 'text/plain' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${book.title || 'book'}.txt`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="mt-4 px-4 py-2 bg-iris text-text rounded-md font-bold hover:bg-iris/80 transition-colors"
+                >
+                  Download Original File
+                </button>
               </div>
             )}
           </div>

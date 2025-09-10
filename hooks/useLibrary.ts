@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { Book, DdcNode, DdcInfo } from '../types';
 import { ddcData } from '/public/data/ddcData';
@@ -46,6 +45,25 @@ const createInitialLibrary = (): DdcNode => {
 
     return root;
 };
+
+export function mergeLibrary(target: DdcNode, source: DdcNode) {
+  // Merge books
+  source.books.forEach(book => {
+    if (!target.books.some(b => b.id === book.id)) {
+      target.books.push(book);
+    }
+  });
+
+  // Merge children
+  source.children.forEach(sourceChild => {
+    const targetChild = target.children.find(c => c.id === sourceChild.id);
+    if (targetChild) {
+      mergeLibrary(targetChild, sourceChild);
+    } else {
+      target.children.push(sourceChild);
+    }
+  });
+}
 
 export const useLibrary = () => {
   const [library, setLibrary] = useState<DdcNode>(createInitialLibrary());

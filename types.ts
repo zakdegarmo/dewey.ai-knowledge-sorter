@@ -35,6 +35,7 @@ export interface Book {
   ddc: DdcClassification;
   ontologyReport: OntologyReport;
   jsonLd: Record<string, any>;
+  fileContent: string;
 }
 
 export interface DdcNode {
