@@ -12,6 +12,7 @@ import ApiKeyInput from './components/ApiKeyInput';
 import { nanoid } from 'nanoid';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
+import RecentAdditions from './components/RecentAdditions';
 
 function collectBooksFromTree(node: DdcNode): Book[] {
   let books = [...node.books];
@@ -22,12 +23,13 @@ function collectBooksFromTree(node: DdcNode): Book[] {
 }
 
 const App: React.FC = () => {
-  const { library, addBook, isLibraryInitialized, setLibrary } = useLibrary();
+  const { library, addBook, isLibraryInitialized } = useLibrary();
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState('');
+  const [recentBooks, setRecentBooks] = useState<Book[]>([]);
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleFileProcess = useCallback(async (file: File) => {
@@ -45,10 +47,7 @@ const App: React.FC = () => {
       const processedData = await processTextDocument(text, apiKey);
 
       setLoadingMessage('Generating call number...');
-      const date = new Date();
-      const dateString = `${date.getFullYear()}${(date.getMonth() + 1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
-
-      // Create new Book object
+      
       const newBook: Book = {
         id: nanoid(),
         callNumber: processedData.ddc.number,
@@ -64,6 +63,7 @@ const App: React.FC = () => {
 
       setLoadingMessage('Placing book on the virtual shelf...');
       addBook(newBook);
+      setRecentBooks(prev => [newBook, ...prev].slice(0, 5));
 
     } catch (err) {
       console.error("Processing failed:", err);
@@ -105,7 +105,6 @@ const App: React.FC = () => {
     }
   };
 
-  // Example: Export the library as a ZIP of folders and book files
   function addNodeToZip(node: DdcNode, path: string, zip: JSZip) {
     node.books.forEach(book => {
       zip.file(`${path}/${book.title || book.id}.json`, JSON.stringify(book, null, 2));
@@ -123,13 +122,6 @@ const App: React.FC = () => {
     });
   };
 
-  function exportLibraryAsZip(library: DdcNode) {
-    const zip = new JSZip();
-    addNodeToZip(library, 'Library', zip);
-    zip.generateAsync({ type: 'blob' }).then(content => {
-      saveAs(content, 'dewey-library.zip');
-    });
-  }
   return (
     <div className="min-h-screen bg-base font-sans p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -150,6 +142,7 @@ const App: React.FC = () => {
               onProcessFiles={handleBatchFileProcess}
               disabled={isLoading || !isLibraryInitialized}
             />
+            <RecentAdditions books={recentBooks} />
             <ApiSnippet library={library} />
             {error && (
               <div className="bg-love/20 border border-love text-rose p-4 rounded-lg">
@@ -160,7 +153,7 @@ const App: React.FC = () => {
             <button
               className="mb-4 px-4 py-2 bg-pine text-white rounded hover:bg-pine/80"
               onClick={handleExportLibrary}
-              disabled={library.length === 0}
+              disabled={library.children.length === 0 && library.books.length === 0}
             >
               Export Library as JSON
             </button>
@@ -178,7 +171,7 @@ const App: React.FC = () => {
               Import Library
             </button>
             <button
-              onClick={() => exportLibraryAsZip(library)}
+              onClick={handleExportLibraryZip}
               className="mb-4 px-4 py-2 bg-pine text-white rounded hover:bg-pine/80"
             >
               Download Library as ZIP

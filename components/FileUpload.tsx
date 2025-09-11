@@ -24,10 +24,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ onProcessFiles, disabled }) => 
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
+    if (disabled) return;
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       processFiles(Array.from(e.dataTransfer.files));
     }
-  }, [onProcessFiles]);
+  }, [onProcessFiles, disabled]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();

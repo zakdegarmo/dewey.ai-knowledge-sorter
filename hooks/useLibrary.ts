@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Book, DdcNode, DdcInfo } from '../types';
-import { ddcData } from '/public/data/ddcData';
+import { ddcData } from '../data/ddcData';
 
 const createInitialLibrary = (): DdcNode => {
     const root: DdcNode = {
