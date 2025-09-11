@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { Book } from './types';
+import { Book, DdcNode } from './types';
 import { useLibrary } from './hooks/useLibrary';
 import { processTextDocument } from './services/geminiService';
 import FileUpload from './components/FileUpload';
@@ -10,6 +10,8 @@ import Loader from './components/Loader';
 import { LogoIcon } from './components/icons/LogoIcon';
 import ApiKeyInput from './components/ApiKeyInput';
 import { nanoid } from 'nanoid';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 
 function collectBooksFromTree(node: DdcNode): Book[] {
   let books = [...node.books];
@@ -103,6 +105,31 @@ const App: React.FC = () => {
     }
   };
 
+  // Example: Export the library as a ZIP of folders and book files
+  function addNodeToZip(node: DdcNode, path: string, zip: JSZip) {
+    node.books.forEach(book => {
+      zip.file(`${path}/${book.title || book.id}.json`, JSON.stringify(book, null, 2));
+    });
+    node.children.forEach(child => {
+      addNodeToZip(child, `${path}/${child.name}`, zip);
+    });
+  }
+
+  const handleExportLibraryZip = () => {
+    const zip = new JSZip();
+    addNodeToZip(library, 'Library', zip);
+    zip.generateAsync({ type: 'blob' }).then(content => {
+      saveAs(content, 'dewey-library.zip');
+    });
+  };
+
+  function exportLibraryAsZip(library: DdcNode) {
+    const zip = new JSZip();
+    addNodeToZip(library, 'Library', zip);
+    zip.generateAsync({ type: 'blob' }).then(content => {
+      saveAs(content, 'dewey-library.zip');
+    });
+  }
   return (
     <div className="min-h-screen bg-base font-sans p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
@@ -149,6 +176,12 @@ const App: React.FC = () => {
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500"
             >
               Import Library
+            </button>
+            <button
+              onClick={() => exportLibraryAsZip(library)}
+              className="mb-4 px-4 py-2 bg-pine text-white rounded hover:bg-pine/80"
+            >
+              Download Library as ZIP
             </button>
           </div>
 

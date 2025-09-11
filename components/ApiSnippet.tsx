@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { DdcNode } from '../types';
 import { downloadFile } from '../utils/fileUtils';
@@ -152,6 +151,18 @@ const ApiSnippet: React.FC<ApiSnippetProps> = ({ library }) => {
       >
         Download Query Function
       </button>
+
+      <div className="mt-6">
+        <h4 className="text-lg font-semibold mb-2">API Endpoint Example</h4>
+        <p className="text-muted text-sm mb-4">
+          You can also use this API as an endpoint in your application. Here's an example of how to call it:
+        </p>
+        <pre className="bg-base p-4 rounded-md text-sm text-subtle overflow-x-auto">
+          <code>
+            {`const apiUrl = "https://dewey-ai-knowledge-sorter-d3sc.vercel.app/api/analyze";\n\n// Example usage:\nfetch(apiUrl, {\n  method: "POST",\n  headers: { "Content-Type": "application/json" },\n  body: JSON.stringify({ text, apiKey }),\n})\n  .then(res => res.json())\n  .then(data => {\n    // handle response\n  });`}
+          </code>
+        </pre>
+      </div>
     </div>
   );
 };

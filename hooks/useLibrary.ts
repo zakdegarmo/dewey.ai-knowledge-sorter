@@ -67,7 +67,29 @@ export function mergeLibrary(target: DdcNode, source: DdcNode) {
 
 export const useLibrary = () => {
   const [library, setLibrary] = useState<DdcNode>(createInitialLibrary());
-  const [isLibraryInitialized, setIsLibraryInitialized] = useState(true);
+  const [isLibraryInitialized, setIsLibraryInitialized] = useState(false);
+
+  useEffect(() => {
+    const fetchLibrary = async () => {
+      try {
+        const response = await fetch('/data/library.json');
+        if (response.ok) {
+          const loadedLibrary = await response.json();
+          setLibrary(currentLibrary => {
+            const newLibrary = JSON.parse(JSON.stringify(currentLibrary));
+            mergeLibrary(newLibrary, loadedLibrary);
+            return newLibrary;
+          });
+        }
+      } catch (error) {
+        console.error("Could not load default library. Starting fresh.", error);
+      } finally {
+        setIsLibraryInitialized(true);
+      }
+    };
+
+    fetchLibrary();
+  }, []);
 
   const addBook = useCallback((book: Book) => {
     setLibrary(currentLibrary => {
