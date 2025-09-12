@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Book, DdcNode, DdcInfo } from '../types';
+import { Book, DdcNode, DdcInfo, DdcConcept } from '../types';
 import { ddcData } from '../data/ddcData';
 
+// Creates a simple root node for the library.
 const createInitialLibrary = (): DdcNode => {
-    const root: DdcNode = {
+    return {
         id: 'root',
         name: 'Library',
         children: [],
@@ -15,118 +16,100 @@ const createInitialLibrary = (): DdcNode => {
             "name": "Dewey.ai Knowledge Library"
         }
     };
-    
-    const mainClasses = ddcData
-        .filter(item => /^\d00$/.test(item.notation))
-        .sort((a, b) => a.notation.localeCompare(b.notation));
-
-    mainClasses.forEach(c => {
-        const number = c.notation;
-        const name = c.prefLabel.en;
-        root.children.push({
-            id: number,
-            name: `${number} - ${name}`,
-            children: [],
-            books: [],
-            config: {
-                 "@context": {
-                    "schema": "http://schema.org/",
-                    "dc": "http://purl.org/dc/terms/",
-                    "dewey": "http://purl.org/NET/decimalised#"
-                  },
-                "@id": `urn:library:class:${number}`,
-                "@type": "schema:CollectionPage",
-                "name": name,
-                "dewey:notation": number,
-                ...(c.scopeNote?.en && { "schema:description": c.scopeNote.en.join(' ') })
-            }
-        });
-    });
-
-    return root;
 };
 
-export function mergeLibrary(target: DdcNode, source: DdcNode) {
-  // Merge books
-  source.books.forEach(book => {
-    if (!target.books.some(b => b.id === book.id)) {
-      target.books.push(book);
-    }
-  });
+// Places a book into the library using a fractal path based on its DDC number.
+const placeBookInLibrary = (library: DdcNode, book: Book): DdcNode => {
+  const newLibrary = JSON.parse(JSON.stringify(library));
+  let currentNode = newLibrary;
 
-  // Merge children
-  source.children.forEach(sourceChild => {
-    const targetChild = target.children.find(c => c.id === sourceChild.id);
-    if (targetChild) {
-      mergeLibrary(targetChild, sourceChild);
-    } else {
-      target.children.push(sourceChild);
+  // Convert DDC number into a path, e.g., "005.13" -> ["0", "0", "5", "1", "3"]
+  const pathParts = book.ddc.number.replace(/\./g, '').split('');
+  let cumulativePath = '';
+
+  // Create a nested folder for each digit in the path.
+  for (const part of pathParts) {
+    cumulativePath += part;
+    let childNode = currentNode.children.find(c => c.id === cumulativePath);
+
+    if (!childNode) {
+      let name = cumulativePath;
+      // Find the most relevant semantic name for the current path.
+      const ddcInfo = ddcData.find(d => d.notation === cumulativePath) || 
+                      ddcData.find(d => d.notation === `${cumulativePath}0`) || 
+                      ddcData.find(d => d.notation === `${cumulativePath}00`);
+
+      if (ddcInfo) {
+        name = `${cumulativePath} - ${ddcInfo.prefLabel.en}`;
+      }
+
+      childNode = {
+        id: cumulativePath,
+        name: name,
+        children: [],
+        books: [],
+        config: {
+            "@context": { "schema": "http://schema.org/", "dc": "http://purl.org/dc/terms/", "dewey": "http://purl.org/NET/decimalised#" },
+            "@id": `urn:library:class:${cumulativePath}`,
+            "@type": "schema:CollectionPage",
+            "name": ddcInfo?.prefLabel.en || cumulativePath,
+            "dewey:notation": cumulativePath
+        }
+      };
+      currentNode.children.push(childNode);
+      // Sort children numerically to ensure correct order.
+      currentNode.children.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
     }
-  });
+    currentNode = childNode;
+  }
+
+  // Add the book to the final node in the path.
+  if (!currentNode.books.some(b => b.id === book.id)) {
+    currentNode.books.push(book);
+  }
+  
+  return newLibrary;
 }
 
 export const useLibrary = () => {
   const [library, setLibrary] = useState<DdcNode>(createInitialLibrary());
   const [isLibraryInitialized, setIsLibraryInitialized] = useState(false);
 
+  const addBook = useCallback((book: Book) => {
+    setLibrary(currentLibrary => placeBookInLibrary(currentLibrary, book));
+  }, []);
+
   useEffect(() => {
-    const fetchLibrary = async () => {
+    const fetchAndRebuildLibrary = async () => {
       try {
         const response = await fetch('/data/library.json');
         if (response.ok) {
           const loadedLibrary = await response.json();
-          setLibrary(currentLibrary => {
-            const newLibrary = JSON.parse(JSON.stringify(currentLibrary));
-            mergeLibrary(newLibrary, loadedLibrary);
-            return newLibrary;
+          
+          const collectBooks = (node: DdcNode): Book[] => {
+            let books = [...node.books];
+            for (const child of node.children) {
+              books = books.concat(collectBooks(child));
+            }
+            return books;
+          };
+          const allBooks = collectBooks(loadedLibrary);
+          
+          let newLibrary = createInitialLibrary();
+          allBooks.forEach(book => {
+            newLibrary = placeBookInLibrary(newLibrary, book);
           });
+          setLibrary(newLibrary);
         }
       } catch (error) {
-        console.error("Could not load default library. Starting fresh.", error);
+        // It's okay if the default library doesn't exist.
+        console.log("No default library found. Starting fresh.");
       } finally {
         setIsLibraryInitialized(true);
       }
     };
 
-    fetchLibrary();
-  }, []);
-
-  const addBook = useCallback((book: Book) => {
-    setLibrary(currentLibrary => {
-      const newLibrary = JSON.parse(JSON.stringify(currentLibrary));
-      let currentNode = newLibrary;
-
-      book.ddc.path.forEach((pathPart: DdcInfo) => {
-        let childNode = currentNode.children.find((c: DdcNode) => c.id === pathPart.number);
-        if (!childNode) {
-          const ddcInfo = ddcData.find(d => d.notation === pathPart.number);
-          childNode = {
-            id: pathPart.number,
-            name: `${pathPart.number} - ${pathPart.name}`,
-            children: [],
-            books: [],
-            config: {
-                "@context": {
-                    "schema": "http://schema.org/",
-                    "dc": "http://purl.org/dc/terms/",
-                    "dewey": "http://purl.org/NET/decimalised#"
-                  },
-                "@id": `urn:library:class:${pathPart.number}`,
-                "@type": "schema:CollectionPage",
-                "name": pathPart.name,
-                "dewey:notation": pathPart.number,
-                ...(ddcInfo?.scopeNote?.en && { "schema:description": ddcInfo.scopeNote.en.join(' ') })
-            }
-          };
-          currentNode.children.push(childNode);
-          currentNode.children.sort((a,b) => a.id.localeCompare(b.id));
-        }
-        currentNode = childNode;
-      });
-
-      currentNode.books.push(book);
-      return newLibrary;
-    });
+    fetchAndRebuildLibrary();
   }, []);
 
   return { library, addBook, isLibraryInitialized };

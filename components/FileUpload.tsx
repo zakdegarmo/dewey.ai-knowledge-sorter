@@ -37,11 +37,24 @@ const FileUpload: React.FC<FileUploadProps> = ({ onProcessFiles, disabled }) => 
   };
   
   const processFiles = (files: File[]) => {
-    const validFiles = files.filter(file => file.type === "text/plain");
+    const validFiles = files.filter(file => {
+      const fileName = file.name.toLowerCase();
+      return (
+        file.type === "text/plain" ||
+        file.type === "text/javascript" ||
+        file.type === "application/javascript" ||
+        file.type === "text/x-python" ||
+        file.type === "application/x-python-code" ||
+        fileName.endsWith('.js') ||
+        fileName.endsWith('.py') ||
+        fileName.endsWith('.txt')
+      );
+    });
+
     if (validFiles.length > 0) {
       onProcessFiles(validFiles);
     } else {
-      alert("Please upload valid .txt files.");
+      alert("Please upload valid .txt, .js, or .py files.");
     }
   };
 
@@ -62,13 +75,13 @@ const FileUpload: React.FC<FileUploadProps> = ({ onProcessFiles, disabled }) => 
         type="file"
         className="hidden"
         onChange={handleChange}
-        accept=".txt"
+        accept=".txt,.js,.py"
         multiple
         disabled={disabled}
       />
       <div className="flex flex-col items-center justify-center gap-4 text-muted">
         <UploadIcon className={`w-12 h-12 transition-colors ${dragActive ? 'text-pine' : ''}`} />
-        <p className="font-semibold text-text">Drag & Drop .txt files here</p>
+        <p className="font-semibold text-text">Drag & Drop files here</p>
         <p>or</p>
         <button
           onClick={onButtonClick}
